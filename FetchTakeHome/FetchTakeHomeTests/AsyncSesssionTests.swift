@@ -48,7 +48,7 @@ final class AsyncSesssionTests: XCTestCase {
         
         let asynSession = AsyncSession(sessionConfiguration: sessionConfig)
         var complete: Double? = nil
-        let data = try await asynSession.download("/image/jpeg",
+        let data = try await asynSession.download(path:"/image/jpeg",
                                                   parameters: nil) {bytesWritten,
                                                                     totalBytesWritten,
                                                                     totalBytesExpectedToWrite,

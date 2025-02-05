@@ -10,20 +10,48 @@ import UIKit
 
 enum RecipeServiceError: Error {
     case invalidImageData
+    case invalidURL(String)
     case networkError(Error)
 }
 
-class RecipeService: FetchService {
-    private let timeToLive: Double = 60
+protocol RecipeServiceConfiguration {
+    var recipeListRoute: String { get }
+    var imageTimeToLive: Double { get }
+    var host: String { get }
+}
+
+extension RecipeServiceConfiguration {
+    var imageTimeToLive: Double {
+        return 60.0
+    }
+    
+    var host: String {
+        return "d3jbb8n5wk0qxi.cloudfront.net"
+    }
+}
+
+struct DefaultRecipeServiceConfiguration: RecipeServiceConfiguration {
+    var recipeListRoute: String {
+        return "recipes-malformed.json"
+    }
+}
+
+class RecipeService: APIService {
+    private let configuration: RecipeServiceConfiguration
+    
+    init(configuration: RecipeServiceConfiguration = DefaultRecipeServiceConfiguration() ) {
+        self.configuration = configuration
+    }
     
     func getRecipes() async throws -> [Recipe] {
-        let path = "recipes.json"
         do {
-            let receipeList: RecipeList = try await session.get(path: path, parameters: nil)
+            let session = createSession(host: configuration.host)
+            let receipeList: RecipeList = try await session.get(path: configuration.recipeListRoute,
+                                                                       parameters: nil)
             return receipeList.recipes
         }
         catch {
-            print("🌐 Fetching recipes failed: \(error.localizedDescription)")
+            print("🌐 Fetching recipes failed: \(error)")
             throw RecipeServiceError.networkError(error)
         }
     }
@@ -35,23 +63,35 @@ class RecipeService: FetchService {
         }
         
         do {
-            let imageData = try await session.download(path: recipe.photoUrlSmall)
-            guard let image = UIImage(data: imageData) else {
+            guard let components = URLComponents(string: recipe.photoUrlSmall),
+                  let host = components.host else {
+                throw RecipeServiceError.invalidURL(recipe.photoUrlSmall)
+            }
+            
+            let session = createSession(host: host)
+            let imageBytes = try await session.download(path: components.path)
+            
+            guard let image = UIImage(data: imageBytes) else {
                 throw RecipeServiceError.invalidImageData
             }
             
-            await ImageRepository.shared.addImageData(imageData:
-                                                        ImageData(referenceId: recipe.uuid,
-                                                                  data: imageData,
-                                                                  expire: Date().addingTimeInterval(60 * timeToLive)))
+            let imageData = ImageData(referenceId: recipe.uuid,
+                                      data: imageBytes,
+                                      expire: Date().addingTimeInterval(60 * configuration.imageTimeToLive))
+            
+            await ImageRepository.shared.addImageData(imageData: imageData)
             return image
         }
         catch {
-            print("🌐 Image download failed for \(recipe.photoUrlSmall): \(error.localizedDescription)")
+            print("🌐 Image download failed for \(recipe.photoUrlSmall): \(error)")
             throw RecipeServiceError.networkError(error)
         }
     }
+}
+
+extension RecipeService {
     
+    //TODO inject ImageRepository
     private func imageDataFromRepo(receiptID: String) async -> Data? {
         guard let imageData = await ImageRepository.shared.getImageData(referenceID: receiptID),
               imageData.expire > Date() else {

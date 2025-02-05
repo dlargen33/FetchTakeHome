@@ -12,12 +12,16 @@ struct RecipeList: Codable {
 }
 
 // MARK: - Recipe
-struct Recipe: Codable {
+struct Recipe: Codable, Identifiable, Hashable {
     let cuisine: String
     let name: String
     let photoUrlLarge: String
     let photoUrlSmall: String
-    let sourceURL: String?
+    let sourceUrl: String?
     let uuid: String
-    let youtubeURL: String?
+    let youtubeUrl: String?
+    
+    var id: String {
+        return uuid
+    }
 }
