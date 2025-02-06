@@ -30,5 +30,6 @@ struct RecipesView: View {
 }
 
 #Preview {
-    RecipesView(viewModel: RecipesViewModel()) { url in }
+    let viewModel = RecipesViewModel()
+    RecipesView(viewModel: viewModel) { url in }
 }

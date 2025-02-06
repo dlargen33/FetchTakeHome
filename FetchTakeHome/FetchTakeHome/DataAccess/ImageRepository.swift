@@ -7,7 +7,14 @@
 
 import CoreData
 
-class ImageRepository {
+protocol ImageRepositoryProtocol {
+    func getImageData(referenceID: String) async -> ImageData?
+    
+    @discardableResult
+    func addImageData(imageData: ImageData) async -> Bool
+}
+
+class ImageRepository: ImageRepositoryProtocol {
     
     static let shared = ImageRepository()
     

@@ -8,7 +8,6 @@
 import XCTest
 @testable import FetchTakeHome
 
-
 final class RecipeServiceTests: XCTestCase {
 
     struct TestConfiguration: RecipeServiceConfiguration {
@@ -19,12 +18,78 @@ final class RecipeServiceTests: XCTestCase {
         }
     }
     
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+    class TestAsyncSession: AsyncSessionProtocol {
+        var sessionConfiguration: AsyncSession.SessionConfiguration
+        var downloadCalled = false
+        var data = Data()
+        
+        init(){
+            sessionConfiguration = AsyncSession.SessionConfiguration(scheme: "https",
+                                                                     host: "somehost",
+                                                                     headers: nil,
+                                                                     timeout: 60)
+        }
+        
+        func get<Output: Codable>(path: String,
+                                  parameters: [String : Any]?,
+                                  dateFormatters: [DateFormatter]?) async throws -> Output {
+            
+            return [String: String]() as! Output
+        }
+        
+        func download(path: String,
+                      parameters: [String : Any]?,
+                      progress: FetchTakeHome.AsyncSessionProgress?) async throws -> Data {
+            downloadCalled = true
+           return data
+        }
+        
+        func createValidData() {
+            let image = UIImage(systemName: "photo") ?? UIImage()
+            data = image.pngData() ?? Data()
+        }
+        
+        func createBadData() {
+            data = Data()
+        }
     }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    
+    class TestImageRepository: ImageRepositoryProtocol {
+        var imageData: ImageData?
+        var addImageDataCalled = false
+        var getImageDataCalled = false
+        
+        func addImageData(imageData: ImageData) async -> Bool {
+            addImageDataCalled = true
+            return true
+        }
+        
+        func getImageData(referenceID: String) async -> ImageData? {
+            getImageDataCalled = true
+            return imageData
+        }
+        
+        func createValidImageData(referenceID: String) {
+            let image = UIImage(systemName: "photo") ?? UIImage()
+            let data = image.pngData() ?? Data()
+            let expire = Date().addingTimeInterval(7200)
+            imageData = ImageData(referenceId: referenceID,
+                                  data: data,
+                                  expire: expire)
+        }
+        
+        func createExpiredImageData(referenceID: String) {
+            let image = UIImage(systemName: "photo") ?? UIImage()
+            let data = image.pngData() ?? Data()
+            let expire = Date().addingTimeInterval(-7200)
+            imageData = ImageData(referenceId: referenceID,
+                                  data: data,
+                                  expire: expire)
+        }
+        
+        func createMissingImageData() {
+            imageData = nil
+        }
     }
     
     func testCanGetRecipes() async throws {
@@ -45,10 +110,147 @@ final class RecipeServiceTests: XCTestCase {
         }
     }
     
-    func testHandleEmptuRecipes() async throws {
+    func testHandleEmptyRecipes() async throws {
         let recipeService = RecipeService(configuration:
                                             TestConfiguration(route: "recipes-empty.json"))
         let list = try await recipeService.getRecipes()
         XCTAssert(list.count == 0 )
+    }
+    
+    func testGetsImageFromCache() async throws {
+        let testImageRepository = TestImageRepository()
+        let testAsyncSession = TestAsyncSession()
+        let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
+        testImageRepository.createValidImageData(referenceID: referenceID)
+        
+        let recipeService = RecipeService(session: testAsyncSession,
+                                          imageRepository: testImageRepository)
+        let recipe = Recipe(cuisine: "Malaysian",
+                            name: "Apam Balik",
+                            photoUrlLarge: nil,
+                            photoUrlSmall: "https://d3jbb8n5wk0qxi.cloudfront.net/photos/b9ab0071-b281-4bee-b361-ec340d405320/small.jpg",
+                            sourceUrl: nil,
+                            uuid: referenceID,
+                            youtubeUrl: nil)
+        
+        let _ = await recipeService.getRecipeImage(recipe: recipe)
+        XCTAssert(!testAsyncSession.downloadCalled)
+    }
+    
+    func testImageFromCacheIsExpired() async throws {
+        let testImageRepository = TestImageRepository()
+        let testAsyncSession = TestAsyncSession()
+        let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
+        testImageRepository.createExpiredImageData(referenceID: referenceID)
+        testAsyncSession.createValidData()
+        
+        let recipeService = RecipeService(session: testAsyncSession,
+                                          imageRepository: testImageRepository)
+        let recipe = Recipe(cuisine: "Malaysian",
+                            name: "Apam Balik",
+                            photoUrlLarge: nil,
+                            photoUrlSmall: "https://d3jbb8n5wk0qxi.cloudfront.net/photos/b9ab0071-b281-4bee-b361-ec340d405320/small.jpg",
+                            sourceUrl: nil,
+                            uuid: referenceID,
+                            youtubeUrl: nil)
+        
+        let _ = await recipeService.getRecipeImage(recipe: recipe)
+        XCTAssert(testAsyncSession.downloadCalled)
+        XCTAssert(testImageRepository.addImageDataCalled)
+    }
+    
+    func testImageOnCacheMiss() async throws {
+        let testImageRepository = TestImageRepository()
+        let testAsyncSession = TestAsyncSession()
+        let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
+        testImageRepository.createMissingImageData()
+        testAsyncSession.createValidData()
+        
+        let recipeService = RecipeService(session: testAsyncSession,
+                                          imageRepository: testImageRepository)
+        let recipe = Recipe(cuisine: "Malaysian",
+                            name: "Apam Balik",
+                            photoUrlLarge: nil,
+                            photoUrlSmall: "https://d3jbb8n5wk0qxi.cloudfront.net/photos/b9ab0071-b281-4bee-b361-ec340d405320/small.jpg",
+                            sourceUrl: nil,
+                            uuid: referenceID,
+                            youtubeUrl: nil)
+        
+        let _ = await recipeService.getRecipeImage(recipe: recipe)
+        XCTAssert(testAsyncSession.downloadCalled)
+        XCTAssert(testImageRepository.addImageDataCalled)
+    }
+    
+    func testMissingImageWhenMissingUrl() async throws {
+        let testImageRepository = TestImageRepository()
+        let testAsyncSession = TestAsyncSession()
+        let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
+        testImageRepository.createMissingImageData()
+        
+        let recipeService = RecipeService(session: testAsyncSession,
+                                          imageRepository: testImageRepository)
+        let recipe = Recipe(cuisine: "Malaysian",
+                            name: "Apam Balik",
+                            photoUrlLarge: nil,
+                            photoUrlSmall: nil,
+                            sourceUrl: nil,
+                            uuid: referenceID,
+                            youtubeUrl: nil)
+        
+        let image = await recipeService.getRecipeImage(recipe: recipe)
+        let target = UIImage(named: "missing") ?? UIImage()
+        
+        XCTAssert(!testAsyncSession.downloadCalled)
+        XCTAssert(!testImageRepository.addImageDataCalled)
+        XCTAssert(image == target)
+    }
+    
+    func testMissingImageForBadUrl() async throws {
+        let testImageRepository = TestImageRepository()
+        let testAsyncSession = TestAsyncSession()
+        let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
+        testImageRepository.imageData = nil
+        
+        let recipeService = RecipeService(session: testAsyncSession,
+                                          imageRepository: testImageRepository)
+        let recipe = Recipe(cuisine: "Malaysian",
+                            name: "Apam Balik",
+                            photoUrlLarge: nil,
+                            photoUrlSmall: "this_is_not_an_url",
+                            sourceUrl: nil,
+                            uuid: referenceID,
+                            youtubeUrl: nil)
+        
+        let image = await recipeService.getRecipeImage(recipe: recipe)
+        let target = UIImage(named: "missing") ?? UIImage()
+        
+        XCTAssert(!testAsyncSession.downloadCalled)
+        XCTAssert(!testImageRepository.addImageDataCalled)
+        XCTAssert(image == target)
+    }
+    
+    func testMissingImageForBadData() async throws {
+        let testImageRepository = TestImageRepository()
+        let testAsyncSession = TestAsyncSession()
+        let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
+        testImageRepository.createMissingImageData()
+        testAsyncSession.createBadData()
+        
+        let recipeService = RecipeService(session: testAsyncSession,
+                                          imageRepository: testImageRepository)
+        let recipe = Recipe(cuisine: "Malaysian",
+                            name: "Apam Balik",
+                            photoUrlLarge: nil,
+                            photoUrlSmall: "https://d3jbb8n5wk0qxi.cloudfront.net/photos/b9ab0071-b281-4bee-b361-ec340d405320/small.jpg",
+                            sourceUrl: nil,
+                            uuid: referenceID,
+                            youtubeUrl: nil)
+        
+        let image = await recipeService.getRecipeImage(recipe: recipe)
+        let target = UIImage(named: "missing") ?? UIImage()
+        
+        XCTAssert(testAsyncSession.downloadCalled)
+        XCTAssert(!testImageRepository.addImageDataCalled)
+        XCTAssert(image == target)
     }
 }

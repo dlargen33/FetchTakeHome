@@ -15,8 +15,8 @@ struct RecipeList: Codable {
 struct Recipe: Codable, Identifiable, Hashable {
     let cuisine: String
     let name: String
-    let photoUrlLarge: String
-    let photoUrlSmall: String
+    let photoUrlLarge: String?
+    let photoUrlSmall: String?
     let sourceUrl: String?
     let uuid: String
     let youtubeUrl: String?

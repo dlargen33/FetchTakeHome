@@ -14,10 +14,9 @@ class RecipeViewModel: ObservableObject {
     enum ImageDownloadState {
         case downloading
         case complete
-        case failed
     }
     
-    @Published var recipeImage: UIImage = UIImage() //maybe find some default
+    @Published var recipeImage: UIImage = UIImage()
     @Published var imageDownloadState: ImageDownloadState = .downloading
     
     private let recipe: Recipe
@@ -35,14 +34,9 @@ class RecipeViewModel: ObservableObject {
     }
     
     func loadImage() async {
-        do {
-            imageDownloadState = .downloading
-            let recipeService = RecipeService()
-            recipeImage = try await recipeService.getRecipeImage(recipe: recipe)
-            imageDownloadState = .complete
-        }
-        catch {
-            imageDownloadState = .failed
-        }
+        imageDownloadState = .downloading
+        let recipeService = RecipeService()
+        recipeImage = await recipeService.getRecipeImage(recipe: recipe)
+        imageDownloadState = .complete
     }
 }

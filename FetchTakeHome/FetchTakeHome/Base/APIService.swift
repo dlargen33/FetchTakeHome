@@ -10,16 +10,16 @@
 ///
 protocol APIService {
     func createSession(host: String) -> AsyncSession
+    //func createImageRepository() -
 }
 
 extension APIService {
     func createSession(host: String) -> AsyncSession {
-        let sessionConfig = AsyncSession.SessionConfiguration(
-            scheme: "https",
-            host: host,
-            headers: nil,
-            timeout: 60,
-            decodingStrategy: .convertFromSnakeCase)
+        let sessionConfig = AsyncSession.SessionConfiguration(scheme: "https",
+                                                              host: host,
+                                                              headers: nil,
+                                                              timeout: 60,
+                                                              decodingStrategy: .convertFromSnakeCase)
         return AsyncSession(sessionConfiguration: sessionConfig)
     }
 }

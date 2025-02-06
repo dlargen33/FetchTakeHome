@@ -32,71 +32,97 @@ extension RecipeServiceConfiguration {
 
 struct DefaultRecipeServiceConfiguration: RecipeServiceConfiguration {
     var recipeListRoute: String {
-        return "recipes-malformed.json"
+        return "recipes.json"
     }
 }
 
 class RecipeService: APIService {
+    private var session: AsyncSessionProtocol
+    private var imageRepository: ImageRepositoryProtocol
     private let configuration: RecipeServiceConfiguration
-    
-    init(configuration: RecipeServiceConfiguration = DefaultRecipeServiceConfiguration() ) {
+
+    init(configuration: RecipeServiceConfiguration = DefaultRecipeServiceConfiguration()) {
+        self.configuration = configuration
+        self.session = AsyncSession(
+            sessionConfiguration: AsyncSession.SessionConfiguration(scheme: "https",
+                                                                    host: configuration.host,
+                                                                    headers: nil,
+                                                                    timeout: 60,
+                                                                    decodingStrategy: .convertFromSnakeCase))
+        self.imageRepository = ImageRepository.shared
+    }
+
+    init(session: AsyncSessionProtocol,
+         imageRepository: ImageRepositoryProtocol,
+         configuration: RecipeServiceConfiguration = DefaultRecipeServiceConfiguration()) {
+        self.session = session
+        self.imageRepository = imageRepository
         self.configuration = configuration
     }
     
     func getRecipes() async throws -> [Recipe] {
         do {
-            let session = createSession(host: configuration.host)
             let receipeList: RecipeList = try await session.get(path: configuration.recipeListRoute,
-                                                                       parameters: nil)
+                                                                parameters: nil,
+                                                                dateFormatters: nil)
             return receipeList.recipes
         }
         catch {
-            print("🌐 Fetching recipes failed: \(error)")
+            print("🌐 getRecipes recipes failed: \(error)")
             throw RecipeServiceError.networkError(error)
         }
     }
     
-    func getRecipeImage(recipe: Recipe) async throws -> UIImage {
-        if let data = await imageDataFromRepo(receiptID: recipe.uuid),
+    func getRecipeImage(recipe: Recipe) async -> UIImage {
+        if let data = await imageDataFromRepo(recipeID: recipe.uuid),
            let image = UIImage(data: data){
             return image
         }
         
         do {
-            guard let components = URLComponents(string: recipe.photoUrlSmall),
+            guard let photoUrl = recipe.photoUrlSmall,
+                  let components = URLComponents(string: photoUrl),
                   let host = components.host else {
-                throw RecipeServiceError.invalidURL(recipe.photoUrlSmall)
+                print("🌐 getRecipeImage: Invalid image url")
+                return UIImage(named: "missing") ?? UIImage()
             }
             
-            let session = createSession(host: host)
-            let imageBytes = try await session.download(path: components.path)
+            session.sessionConfiguration.host = host
+            let imageBytes = try await session.download(path: components.path,
+                                                        parameters: nil,
+                                                        progress: nil)
             
             guard let image = UIImage(data: imageBytes) else {
-                throw RecipeServiceError.invalidImageData
+                print("🌐 getRecipeImage: Invalid image data")
+                return UIImage(named: "missing") ?? UIImage()
             }
             
-            let imageData = ImageData(referenceId: recipe.uuid,
-                                      data: imageBytes,
-                                      expire: Date().addingTimeInterval(60 * configuration.imageTimeToLive))
-            
-            await ImageRepository.shared.addImageData(imageData: imageData)
+            await addImageData(referenceId: recipe.uuid,
+                               data: imageBytes)
             return image
         }
         catch {
-            print("🌐 Image download failed for \(recipe.photoUrlSmall): \(error)")
-            throw RecipeServiceError.networkError(error)
+            print("🌐 getRecipeImage download failed: \(error)")
+            return UIImage(named: "missing") ?? UIImage()
         }
     }
 }
 
 extension RecipeService {
-    
-    //TODO inject ImageRepository
-    private func imageDataFromRepo(receiptID: String) async -> Data? {
-        guard let imageData = await ImageRepository.shared.getImageData(referenceID: receiptID),
+    private func imageDataFromRepo(recipeID: String) async -> Data? {
+        guard let imageData = await imageRepository.getImageData(referenceID: recipeID),
               imageData.expire > Date() else {
             return nil
         }
         return imageData.data
+    }
+    
+    private func addImageData(referenceId: String,
+                              data: Data) async {
+        let imageData = ImageData(referenceId: referenceId,
+                                  data: data,
+                                  expire: Date().addingTimeInterval(60 * configuration.imageTimeToLive))
+        
+        await imageRepository.addImageData(imageData: imageData)
     }
 }

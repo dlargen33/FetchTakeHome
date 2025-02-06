@@ -12,13 +12,26 @@ typealias AsyncSessionProgress = (_ bytesWritten: Int64,
                                   _ totalBytesExpectedToWrite: Int64,
                                   _ percentComplete: Double?) -> Void
 
+protocol AsyncSessionProtocol {
+    var sessionConfiguration: AsyncSession.SessionConfiguration { get set }
+    
+    func get<Output: Codable>(path: String,
+                              parameters: [String: Any]?,
+                              dateFormatters: [DateFormatter]?) async throws -> Output
+    
+    func download (path: String,
+                   parameters: [String: Any]?,
+                   progress: AsyncSessionProgress?) async throws -> Data
+    
+}
+
 /*
  Main network class.  Used to execute Get requests and the provides the ability to Download binary data.
  Other verbs can be added, Put, Patch, Delete.
  
  Class utilizes Swift Concurrency.  Specifically the async api exposed by URLSession. 
  */
-class AsyncSession: NSObject {
+class AsyncSession: NSObject, AsyncSessionProtocol  {
     
     enum SessionError: Error {
         case invalidResponseType
@@ -46,7 +59,8 @@ class AsyncSession: NSObject {
         }
     }
     
-    private let sessionConfiguration: AsyncSession.SessionConfiguration
+    var sessionConfiguration: AsyncSession.SessionConfiguration
+    
     private lazy var urlSession: URLSession = {
         return URLSession(configuration: urlSessionConfiguration,
                           delegate: self,
@@ -58,7 +72,7 @@ class AsyncSession: NSObject {
     var unauthorizedStatusCodes: [HTTPStatusCode] = [.unauthorized, .forbidden]
     var urlSessionConfiguration: URLSessionConfiguration
     
-    init (sessionConfiguration: AsyncSession.SessionConfiguration ) {
+    init (sessionConfiguration: AsyncSession.SessionConfiguration) {
         self.sessionConfiguration = sessionConfiguration
         self.urlSessionConfiguration = URLSessionConfiguration.default
         super.init()

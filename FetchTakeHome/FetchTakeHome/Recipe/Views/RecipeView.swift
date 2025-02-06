@@ -79,12 +79,6 @@ struct RecipeImageView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .shadow(radius: 2)
                     .transition(.opacity)
-            case .failed:
-                Rectangle()
-                    .fill(Color.blue)
-                    .frame(width: 60, height: 60)
-                    .cornerRadius(8)
-                    .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 1.0), value: viewModel.imageDownloadState)
