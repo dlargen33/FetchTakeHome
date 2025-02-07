@@ -27,8 +27,10 @@ class RecipesViewModel: ObservableObject {
         self.loadingState = .loading
         
         ///
-        ///Huge hack. Need to add a delay do to call to recipeService.getRecipes() happens very quickly. It seems
-        ///SwiftUI batches up updates and state on the view was not being updated as I wanted.  Probably could live with out it.
+        /// Huge hack. Need to add a delay do to the call recipeService.getRecipes().
+        /// The api request happens very quickly.
+        /// SwiftUI batches up updates and state on the view was not being updated as I wanted.
+        /// Probably could live with out it.
         ///
         try? await Task.sleep(nanoseconds: 300_000_000)
         

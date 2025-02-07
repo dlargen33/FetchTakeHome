@@ -36,7 +36,13 @@ struct DefaultRecipeServiceConfiguration: RecipeServiceConfiguration {
     }
 }
 
-class RecipeService: APIService {
+
+protocol RecipeServiceProtocol {
+    func getRecipes() async throws -> [Recipe]
+    func getRecipeImage(recipe: Recipe) async throws -> UIImage
+}
+
+class RecipeService: RecipeServiceProtocol {
     private var session: AsyncSessionProtocol
     private var imageRepository: ImageRepositoryProtocol
     private let configuration: RecipeServiceConfiguration
