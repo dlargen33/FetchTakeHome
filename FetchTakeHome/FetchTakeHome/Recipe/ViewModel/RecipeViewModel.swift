@@ -16,9 +16,10 @@ class RecipeViewModel: ObservableObject {
         case complete
     }
     
-    @Published var recipeImage: UIImage = UIImage()
     @Published var imageDownloadState: ImageDownloadState = .downloading
+    @Published var imageData: Data?
     
+    private var image: UIImage?
     private let recipe: Recipe
     
     init(recipe: Recipe) {
@@ -33,23 +34,40 @@ class RecipeViewModel: ObservableObject {
         recipe.cuisine
     }
     
+    var recipeImage: UIImage {
+        if let cached = image {
+            return cached
+        }
+        
+        guard let data = imageData,
+              let decodedImage = UIImage(data: data) else {
+            let missing = UIImage(named: "missing") ?? UIImage()
+            image = missing
+            return missing
+        }
+        
+        image = decodedImage
+        return decodedImage
+    }
+ 
+    
     func loadImage() async {
         imageDownloadState = .downloading
         
         // RecipeService will handle this but what is the point of making the call if url is missing
         guard recipe.hasImageUrl else {
-            recipeImage = UIImage(named: "missing") ?? UIImage()
+            imageData = nil
             imageDownloadState = .complete
             return
         }
         
         do {
             let recipeService = RecipeService()
-            recipeImage = try await recipeService.getRecipeImage(recipe: recipe)
+            imageData = try await recipeService.getRecipeImage(recipe: recipe)
             imageDownloadState = .complete
         }
         catch {
-            recipeImage = UIImage(named: "missing") ?? UIImage()
+            imageData = nil
         }
     }
 }

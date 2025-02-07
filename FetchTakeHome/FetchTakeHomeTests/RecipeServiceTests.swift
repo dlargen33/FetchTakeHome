@@ -133,7 +133,8 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let _ = try await recipeService.getRecipeImage(recipe: recipe)
+        let data = try await recipeService.getRecipeImage(recipe: recipe)
+        XCTAssert(data.count > 0)
         XCTAssert(!testAsyncSession.downloadCalled)
     }
     
@@ -154,7 +155,8 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let _ = try await recipeService.getRecipeImage(recipe: recipe)
+        let data = try await recipeService.getRecipeImage(recipe: recipe)
+        XCTAssert(data.count > 0)
         XCTAssert(testAsyncSession.downloadCalled)
         XCTAssert(testImageRepository.addImageDataCalled)
     }
@@ -176,7 +178,8 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let _ = try await recipeService.getRecipeImage(recipe: recipe)
+        let data = try await recipeService.getRecipeImage(recipe: recipe)
+        XCTAssert(data.count > 0)
         XCTAssert(testAsyncSession.downloadCalled)
         XCTAssert(testImageRepository.addImageDataCalled)
     }
@@ -235,30 +238,4 @@ final class RecipeServiceTests: XCTestCase {
         XCTAssert(!testImageRepository.addImageDataCalled)
     }
     
-    func testThrowsForBadData() async throws {
-        let testImageRepository = TestImageRepository()
-        let testAsyncSession = TestAsyncSession()
-        let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
-        testImageRepository.createMissingImageData()
-        testAsyncSession.createBadData()
-        
-        let recipeService = RecipeService(session: testAsyncSession,
-                                          imageRepository: testImageRepository)
-        let recipe = Recipe(cuisine: "Malaysian",
-                            name: "Apam Balik",
-                            photoUrlLarge: nil,
-                            photoUrlSmall: "https://d3jbb8n5wk0qxi.cloudfront.net/photos/b9ab0071-b281-4bee-b361-ec340d405320/small.jpg",
-                            sourceUrl: nil,
-                            uuid: referenceID,
-                            youtubeUrl: nil)
-        do {
-            let _ = try await recipeService.getRecipeImage(recipe: recipe)
-            XCTFail("Expected an error to be thrown")
-        } catch {
-            XCTAssertTrue(error is RecipeServiceError, "Expected RecipeServiceError: \(error)")
-        }
-        
-        XCTAssert(testAsyncSession.downloadCalled)
-        XCTAssert(!testImageRepository.addImageDataCalled)
-    }
 }

@@ -38,7 +38,7 @@ struct DefaultRecipeServiceConfiguration: RecipeServiceConfiguration {
 
 protocol RecipeServiceProtocol {
     func getRecipes() async throws -> [Recipe]
-    func getRecipeImage(recipe: Recipe) async throws -> UIImage
+    func getRecipeImage(recipe: Recipe) async throws -> Data
 }
 
 class RecipeService: RecipeServiceProtocol {
@@ -78,10 +78,9 @@ class RecipeService: RecipeServiceProtocol {
         }
     }
     
-    func getRecipeImage(recipe: Recipe) async throws -> UIImage {
-        if let data = await imageDataFromRepo(recipeID: recipe.uuid),
-           let image = UIImage(data: data){
-            return image
+    func getRecipeImage(recipe: Recipe) async throws -> Data {
+        if let data = await imageDataFromRepo(recipeID: recipe.uuid) {
+           return data
         }
         
         do {
@@ -97,14 +96,9 @@ class RecipeService: RecipeServiceProtocol {
                                                         parameters: nil,
                                                         progress: nil)
             
-            guard let image = UIImage(data: imageBytes) else {
-                print("🌐 getRecipeImage: Invalid image data")
-                throw RecipeServiceError.invalidImageData
-            }
-            
             await addImageData(referenceId: recipe.uuid,
                                data: imageBytes)
-            return image
+            return imageBytes
         }
         catch {
             print("🌐 getRecipeImage download failed: \(error)")
