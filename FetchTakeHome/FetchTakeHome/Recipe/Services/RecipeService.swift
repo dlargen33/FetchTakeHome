@@ -36,7 +36,6 @@ struct DefaultRecipeServiceConfiguration: RecipeServiceConfiguration {
     }
 }
 
-
 protocol RecipeServiceProtocol {
     func getRecipes() async throws -> [Recipe]
     func getRecipeImage(recipe: Recipe) async throws -> UIImage

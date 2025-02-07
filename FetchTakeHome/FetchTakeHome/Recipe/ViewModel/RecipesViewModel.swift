@@ -27,7 +27,7 @@ class RecipesViewModel: ObservableObject {
         self.loadingState = .loading
         
         ///
-        /// Huge hack. Need to add a delay do to the call recipeService.getRecipes().
+        /// Huge hack. Need to add a delay before calling recipeService.getRecipes().
         /// The api request happens very quickly.
         /// SwiftUI batches up updates and state on the view was not being updated as I wanted.
         /// Probably could live with out it.
@@ -43,7 +43,7 @@ class RecipesViewModel: ObservableObject {
             print("Failed to get recipe list")
             self.loadingState = .error
             self.showAlert = true
-            self.lastErrorMessage = error.localizedDescription
+            self.lastErrorMessage = "Looks like we hit a snag! We couldn’t get the recipes right now.  Tap ‘Refresh’ to try again."
         }
     }
 }

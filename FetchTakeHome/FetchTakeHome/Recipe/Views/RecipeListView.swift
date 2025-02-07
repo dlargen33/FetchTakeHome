@@ -54,7 +54,7 @@ struct RecipeListView: View {
                 .animation(.easeIn(duration: 0.5), value: viewModel.loadingState)
             }
         }
-        .alert("Error",
+        .alert("Oops",
                isPresented: $viewModel.showAlert,
                actions: {
                     Button("OK", role: .cancel) {}
