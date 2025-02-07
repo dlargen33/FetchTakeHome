@@ -17,13 +17,12 @@ Key Features:
 
 Screenshots & Demo:
 <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;">
-  <!-- Row 1 -->
-  <img src="resized_image_1.jpeg" alt="Image 1" style="width: 45%; height: auto;">
-  <img src="resized_image_2.jpeg" alt="Image 2" style="width: 45%; height: auto;">
+
+  <img src="images/resized_image_4.jpeg" alt="Image 1" style="width: 45%; height: auto;">
+  <img src="images/resized_image_2.jpeg" alt="Image 2" style="width: 45%; height: auto;">
   
-  <!-- Row 2 -->
-  <img src="resized_image_3.jpeg" alt="Image 3" style="width: 45%; height: auto;">
-  <img src="resized_image_4.jpeg" alt="Image 4" style="width: 45%; height: auto;">
+  <img src="images/resized_image_3.jpeg" alt="Image 3" style="width: 45%; height: auto;">
+  <img src="images/resized_image_1.jpeg" alt="Image 4" style="width: 45%; height: auto;">
 </div>
 
 
