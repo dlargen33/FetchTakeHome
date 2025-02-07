@@ -25,3 +25,9 @@ struct Recipe: Codable, Identifiable, Hashable {
         return uuid
     }
 }
+
+extension Recipe {
+    var hasImageUrl: Bool {
+        return photoUrlSmall != nil 
+    }
+}

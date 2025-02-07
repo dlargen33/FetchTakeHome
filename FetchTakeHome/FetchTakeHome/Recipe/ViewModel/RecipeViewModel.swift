@@ -35,6 +35,14 @@ class RecipeViewModel: ObservableObject {
     
     func loadImage() async {
         imageDownloadState = .downloading
+        
+        // RecipeService will handle this but what is the point of making the call if url is missing
+        guard recipe.hasImageUrl else {
+            recipeImage = UIImage(named: "missing") ?? UIImage()
+            imageDownloadState = .complete
+            return
+        }
+        
         do {
             let recipeService = RecipeService()
             recipeImage = try await recipeService.getRecipeImage(recipe: recipe)
