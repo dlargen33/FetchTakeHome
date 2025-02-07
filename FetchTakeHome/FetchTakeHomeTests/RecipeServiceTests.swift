@@ -133,7 +133,7 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let _ = await recipeService.getRecipeImage(recipe: recipe)
+        let _ = try await recipeService.getRecipeImage(recipe: recipe)
         XCTAssert(!testAsyncSession.downloadCalled)
     }
     
@@ -154,7 +154,7 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let _ = await recipeService.getRecipeImage(recipe: recipe)
+        let _ = try await recipeService.getRecipeImage(recipe: recipe)
         XCTAssert(testAsyncSession.downloadCalled)
         XCTAssert(testImageRepository.addImageDataCalled)
     }
@@ -176,12 +176,12 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let _ = await recipeService.getRecipeImage(recipe: recipe)
+        let _ = try await recipeService.getRecipeImage(recipe: recipe)
         XCTAssert(testAsyncSession.downloadCalled)
         XCTAssert(testImageRepository.addImageDataCalled)
     }
     
-    func testMissingImageWhenMissingUrl() async throws {
+    func testThrowWhenMissingUrl() async throws {
         let testImageRepository = TestImageRepository()
         let testAsyncSession = TestAsyncSession()
         let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
@@ -197,15 +197,18 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let image = await recipeService.getRecipeImage(recipe: recipe)
-        let target = UIImage(named: "missing") ?? UIImage()
+        do {
+            let _ = try await recipeService.getRecipeImage(recipe: recipe)
+            XCTFail("Expected an error to be thrown")
+        } catch {
+            XCTAssertTrue(error is RecipeServiceError, "Expected RecipeServiceError: \(error)")
+        }
         
         XCTAssert(!testAsyncSession.downloadCalled)
         XCTAssert(!testImageRepository.addImageDataCalled)
-        XCTAssert(image == target)
     }
     
-    func testMissingImageForBadUrl() async throws {
+    func testThrowsForBadUrl() async throws {
         let testImageRepository = TestImageRepository()
         let testAsyncSession = TestAsyncSession()
         let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
@@ -221,15 +224,18 @@ final class RecipeServiceTests: XCTestCase {
                             uuid: referenceID,
                             youtubeUrl: nil)
         
-        let image = await recipeService.getRecipeImage(recipe: recipe)
-        let target = UIImage(named: "missing") ?? UIImage()
+        do {
+            let _ = try await recipeService.getRecipeImage(recipe: recipe)
+            XCTFail("Expected an error to be thrown")
+        } catch {
+            XCTAssertTrue(error is RecipeServiceError, "Expected RecipeServiceError: \(error)")
+        }
         
         XCTAssert(!testAsyncSession.downloadCalled)
         XCTAssert(!testImageRepository.addImageDataCalled)
-        XCTAssert(image == target)
     }
     
-    func testMissingImageForBadData() async throws {
+    func testThrowsForBadData() async throws {
         let testImageRepository = TestImageRepository()
         let testAsyncSession = TestAsyncSession()
         let referenceID = "0c6ca6e7-e32a-4053-b824-1dbf749910d8"
@@ -245,12 +251,14 @@ final class RecipeServiceTests: XCTestCase {
                             sourceUrl: nil,
                             uuid: referenceID,
                             youtubeUrl: nil)
-        
-        let image = await recipeService.getRecipeImage(recipe: recipe)
-        let target = UIImage(named: "missing") ?? UIImage()
+        do {
+            let _ = try await recipeService.getRecipeImage(recipe: recipe)
+            XCTFail("Expected an error to be thrown")
+        } catch {
+            XCTAssertTrue(error is RecipeServiceError, "Expected RecipeServiceError: \(error)")
+        }
         
         XCTAssert(testAsyncSession.downloadCalled)
         XCTAssert(!testImageRepository.addImageDataCalled)
-        XCTAssert(image == target)
     }
 }

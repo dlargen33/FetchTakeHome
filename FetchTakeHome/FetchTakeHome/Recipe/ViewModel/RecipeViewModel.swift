@@ -35,8 +35,13 @@ class RecipeViewModel: ObservableObject {
     
     func loadImage() async {
         imageDownloadState = .downloading
-        let recipeService = RecipeService()
-        recipeImage = await recipeService.getRecipeImage(recipe: recipe)
-        imageDownloadState = .complete
+        do {
+            let recipeService = RecipeService()
+            recipeImage = try await recipeService.getRecipeImage(recipe: recipe)
+            imageDownloadState = .complete
+        }
+        catch {
+            recipeImage = UIImage(named: "missing") ?? UIImage()
+        }
     }
 }

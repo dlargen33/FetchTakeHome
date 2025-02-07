@@ -73,7 +73,7 @@ class RecipeService: APIService {
         }
     }
     
-    func getRecipeImage(recipe: Recipe) async -> UIImage {
+    func getRecipeImage(recipe: Recipe) async throws -> UIImage {
         if let data = await imageDataFromRepo(recipeID: recipe.uuid),
            let image = UIImage(data: data){
             return image
@@ -84,7 +84,7 @@ class RecipeService: APIService {
                   let components = URLComponents(string: photoUrl),
                   let host = components.host else {
                 print("🌐 getRecipeImage: Invalid image url")
-                return UIImage(named: "missing") ?? UIImage()
+                throw RecipeServiceError.invalidURL(recipe.photoUrlSmall ?? "Missing image url")
             }
             
             session.sessionConfiguration.host = host
@@ -94,7 +94,7 @@ class RecipeService: APIService {
             
             guard let image = UIImage(data: imageBytes) else {
                 print("🌐 getRecipeImage: Invalid image data")
-                return UIImage(named: "missing") ?? UIImage()
+                throw RecipeServiceError.invalidImageData
             }
             
             await addImageData(referenceId: recipe.uuid,
@@ -103,7 +103,7 @@ class RecipeService: APIService {
         }
         catch {
             print("🌐 getRecipeImage download failed: \(error)")
-            return UIImage(named: "missing") ?? UIImage()
+            throw RecipeServiceError.networkError(error)
         }
     }
 }
